@@ -16,8 +16,13 @@ def get_frame(cap):
         exit()
     return frame
 
-def remove_noise(frame, kernel_size):
-    return cv2.morphologyEx(frame, cv2.MORPH_OPEN, np.ones((kernel_size,kernel_size), np.uint8))
+def larger_window(x,y,w,h, ratio=1.1):
+    new_w = int(w * ratio)
+    new_h = int(h * ratio)
+    new_x = int(x - (new_w - w) / 2)
+    new_y = int(y - (new_h - h) / 2)
+
+    return new_x, new_y, new_w, new_h
 
 img_cnt = 0
 
