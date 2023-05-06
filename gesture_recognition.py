@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+# import keras
 import cv2
 
 def get_camera():
@@ -24,12 +25,18 @@ def larger_window(x,y,w,h, ratio=1.1):
 
     return new_x, new_y, new_w, new_h
 
-img_cnt = 0
-
 if __name__ == "__main__":
 
-    background = None
+    # Create camera
     cap = get_camera()
+    img_cnt = 0
+
+    # Label mappings
+    # model = keras.models.load_model("nn_model")
+    LABELS =  ['call_me', 'fingers_crossed', 'okay', 'paper', 'peace', 'rock', 'rock_on', 'scissor', 'thumbs', 'up']
+    LABELS_TO_INDEX = {k: v for v, k in enumerate(LABELS)}
+    INDEX_TO_LABELS = {k: v for k, v in enumerate(LABELS)}
+    
 
     while True:
 
@@ -59,20 +66,42 @@ if __name__ == "__main__":
             # find the location of the biggest contour
             c = max(contours, key = cv2.contourArea)
             x,y,w,h = cv2.boundingRect(c)
+            x,y,w,h = larger_window(x,y,w,h, ratio=1.05)
+
+            # if bounding box is outside of the image, then skip
+            # if (x < 0) or (y < 0) or (x+w > reduced_result.shape[1]) or (y+h > reduced_result.shape[0]):
+            #     continue
+
+            # Pass the binary image to the model
+            cropped = reduced_result[x:x+w, y:y+h]
+            # print(cropped.shape)
+            # print(x,y,w,h)
+            if 0 in cropped.shape:
+                continue
+            # rescaled = cv2.resize(cropped, (100, 120)) # resize to 100 x 120 image
+            # pred = model.predict(rescaled)
+            # y = np.argmax(pred)
+            # label = INDEX_TO_LABELS[y]
 
             # For the segmented_output...
             cv2.drawContours(segmented_output, contours, -1, 255, 3)    # draw all contours
             cv2.rectangle(segmented_output,(x,y),(x+w,y+h),(0,255,0),2) # draw biggest contour
-
-            # For the binary image...
-            # rescaled = # resize to 100 x 120 image
+            
+            # segmented_output = cv2.putText(segmented_output,
+            #                                label,
+            #                                org=(x, y),
+            #                                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+            #                                fontScale=1,
+            #                                color=(255, 0, 0),
+            #                                thickness=2,
+            #                                lineType=cv2.LINE_AA)
 
         # Display the results
         cv2.imshow('Camera Window', segmented_output)
 
         key = cv2.waitKey(1)
         if key == ord('s'): # save
-            cv2.imwrite('img_{}.png'.format(img_cnt), result)
+            cv2.imwrite('img_{}.png'.format(img_cnt), segmented_output)
             img_cnt += 1
         if key == ord('q'): # quit
             cap.release()
