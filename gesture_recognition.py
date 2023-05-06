@@ -30,26 +30,40 @@ if __name__ == "__main__":
 
         # Capture frame-by-frame
         frame = get_frame(cap)
+        bw = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        # Threshold by HSV
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        hsv_result = cv2.inRange(hsv, (0, 15, 0), (17,170,255)) # (0, 50, 0), (17, 175, 255)
+        # hsv_result = cv2.inRange(hsv, (0, 30, 136), (56, 255, 255))
+        hsv_result = cv2.inRange(hsv, (0, 0, 136), (56, 255, 255))
 
-        YCrCb = cv2.cvtColor(frame, cv2.COLOR_BGR2YCrCb)
-        YCrCb_result = cv2.inRange(YCrCb, (0, 135, 85), (255,180,135)) # (0, 135, 85), (255, 180, 135)
-
-        # Merge HSV and YCrCb results
-        global_result = cv2.bitwise_and(YCrCb_result, YCrCb_result)
-        global_result = cv2.medianBlur(global_result, 3)
+        # Blur HSV result
+        global_result = cv2.medianBlur(hsv_result, 3)
         
-        # finally, erode the small particles
-        K = 8
-        reduced_result = cv2.erode(global_result, np.ones((K,K)), iterations=1)
-        # result = np.concatenate((global_result, reduced_result), axis=0)
-        result = reduced_result
+        # finally, remove the small particles
+        K = 5
+        reduced_result = cv2.morphologyEx(global_result, cv2.MORPH_OPEN, np.ones((K,K)))
+        reduced_result = cv2.morphologyEx(reduced_result, cv2.MORPH_CLOSE, np.ones((K,K)))
+        # result = np.concatenate((hsv_result, global_result, reduced_result), axis=0)
+
+        # Pick out all the contours in the image
+        segmented_output = cv2.cvtColor(reduced_result, cv2.COLOR_GRAY2RGB)
+        contours, hierarchy = cv2.findContours(reduced_result, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        if len(contours) != 0:
+
+            # find the location of the biggest contour
+            c = max(contours, key = cv2.contourArea)
+            x,y,w,h = cv2.boundingRect(c)
+
+            # For the segmented_output...
+            cv2.drawContours(segmented_output, contours, -1, 255, 3)    # draw all contours
+            cv2.rectangle(segmented_output,(x,y),(x+w,y+h),(0,255,0),2) # draw biggest contour
+
+            # For the binary image...
+            # rescaled = # resize to 100 x 120 image
 
         # Display the results
-        cv2.imshow('Camera Window', result)
+        cv2.imshow('Camera Window', segmented_output)
 
         key = cv2.waitKey(1)
         if key == ord('s'): # save
